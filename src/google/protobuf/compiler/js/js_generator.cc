@@ -531,10 +531,16 @@ string JSIdent(const GeneratorOptions& options, const FieldDescriptor* field,
     result = is_upper_camel ?
         ToUpperCamel(ParseUpperCamel(field->message_type()->name())) :
         ToLowerCamel(ParseUpperCamel(field->message_type()->name()));
-  } else {
+  }
+  std::size_t foundUnderscore = field->name().find_first_of("_");
+  if (foundUnderscore != std::string::npos) {
     result = is_upper_camel ?
         ToUpperCamel(ParseLowerUnderscore(field->name())) :
         ToLowerCamel(ParseLowerUnderscore(field->name()));
+  } else {
+    result = is_upper_camel ?
+        ToUpperCamel(ParseUpperCamel(field->name())) :
+        ToLowerCamel(ParseUpperCamel(field->name()));
   }
   if (is_map || field->is_map()) {
     // JSPB-style or proto3-style map.
@@ -2038,6 +2044,7 @@ void Generator::GenerateClass(const GeneratorOptions& options,
 
 
     GenerateClassToObject(options, printer, desc);
+    GenerateClassFromObject(options, printer, desc);
     // These must come *before* the extension-field info generation in
     // GenerateClassRegistration so that references to the binary
     // serialization/deserialization functions may be placed in the extension
@@ -2424,7 +2431,7 @@ void Generator::GenerateClassFromObject(const GeneratorOptions& options,
                                         io::Printer* printer,
                                         const Descriptor* desc) const {
   printer->Print(
-      "if (jspb.Message.GENERATE_FROM_OBJECT) {\n"
+      "\n"
       "/**\n"
       " * Loads data from an object into a new instance of this proto.\n"
       " * @param {!Object} obj The object representation of this proto to\n"
@@ -2448,7 +2455,7 @@ void Generator::GenerateClassFromObject(const GeneratorOptions& options,
   printer->Print(
       "  return msg;\n"
       "};\n"
-      "}\n");
+      "\n");
 }
 
 void Generator::GenerateClassFieldFromObject(
@@ -3636,6 +3643,18 @@ void Generator::GenerateFile(const GeneratorOptions& options,
        options.import_style == GeneratorOptions::kImportCommonJsStrict)) {
     printer->Print("var jspb = require('google-protobuf');\n");
     printer->Print("var goog = jspb;\n");
+    printer->Print(
+        "goog.isDef = function(a) {\n"
+        "  if (a === undefined || a === null) {\n"
+        "    return false;\n"
+        "  }\n"
+        "  return true;\n"
+        "}\n"
+        "goog.array = {\n"
+        "  map: function(arr, func) {\n"
+        "    return arr.map(func);\n"
+        "  }\n"
+        "}\n");
 
     // Do not use global scope in strict mode
     if (options.import_style == GeneratorOptions::kImportCommonJsStrict) {
