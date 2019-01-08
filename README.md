@@ -18,6 +18,10 @@
 
 build ./src/protoc
 
+>./src/protoc ./*.proto \
+--js_out=import_style=commonjs:./src \
+--grpc-web_out=import_style=commonjs,mode=grpcweb:./src
+
 Protocol Buffers - Google's data interchange format
 ===================================================
 
