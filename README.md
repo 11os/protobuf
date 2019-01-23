@@ -1,5 +1,7 @@
 # Installation
 
+support fromObject
+
 ## MacOS
 
 ### Env
