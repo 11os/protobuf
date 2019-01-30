@@ -213,12 +213,7 @@ string GetNamespace(const GeneratorOptions& options,
   if (!options.namespace_prefix.empty()) {
     return options.namespace_prefix;
   } else if (!file->package().empty()) {
-    if (options.import_style == GeneratorOptions::kImportWeapp || 
-        options.import_style == GeneratorOptions::kImportMiniprogram) {
-      return "global.proto." + file->package();
-    } else {
-      return "proto." + file->package();
-    }
+    return "proto." + file->package();
   } else {
     return "proto";
   }
@@ -288,7 +283,7 @@ string MaybeCrossFileRef(const GeneratorOptions& options,
                          const Descriptor* to_message) {
   if ((options.import_style == GeneratorOptions::kImportCommonJs ||
        options.import_style == GeneratorOptions::kImportCommonJsStrict ||
-       options.import_style == GeneratorOptions::kImportWeapp) &&
+       options.import_style == GeneratorOptions::kImportMiniprogram) &&
       from_file != to_message->file()) {
     // Cross-file ref in CommonJS needs to use the module alias instead of
     // the global name.
@@ -1801,7 +1796,7 @@ void Generator::GenerateProvides(const GeneratorOptions& options,
 
       // Do not use global scope in strict mode
       if (options.import_style == GeneratorOptions::kImportCommonJsStrict||
-          options.import_style == GeneratorOptions::kImportWeapp) {
+          options.import_style == GeneratorOptions::kImportMiniprogram) {
         string namespaceObject = *it;
         // Remove "proto." from the namespace object
         GOOGLE_CHECK_EQ(0, namespaceObject.compare(0, 6, "proto."));
@@ -3509,8 +3504,6 @@ bool GeneratorOptions::ParseFromOptions(
         import_style = kImportBrowser;
       } else if (options[i].second == "es6") {
         import_style = kImportEs6;
-      } else if (options[i].second == "weapp") {
-        import_style = kImportWeapp;
       } else if (options[i].second == "miniprogram") {
         import_style = kImportMiniprogram;
       } else {
@@ -3651,7 +3644,6 @@ void Generator::GenerateFile(const GeneratorOptions& options,
   // Generate "require" statements.
   if ((options.import_style == GeneratorOptions::kImportCommonJs ||
        options.import_style == GeneratorOptions::kImportCommonJsStrict ||
-       options.import_style == GeneratorOptions::kImportWeapp ||
        options.import_style == GeneratorOptions::kImportMiniprogram)) {
     printer->Print("var jspb = require('google-protobuf');\n");
     printer->Print("var goog = jspb;\n");
@@ -3669,29 +3661,20 @@ void Generator::GenerateFile(const GeneratorOptions& options,
         "}\n");
 
     // Do not use global scope in strict mode
-    if (options.import_style == GeneratorOptions::kImportCommonJsStrict) {
+    if (options.import_style == GeneratorOptions::kImportCommonJsStrict ||
+        options.import_style == GeneratorOptions::kImportMiniprogram) {
       printer->Print("var proto = {};\n\n");
-    } else if (options.import_style == GeneratorOptions::kImportWeapp || options.import_style == GeneratorOptions::kImportMiniprogram) {
-      printer->Print("var global = {};\n\n");
     } else {
       printer->Print("var global = Function('return this')();\n\n");
     }
 
     for (int i = 0; i < file->dependency_count(); i++) {
       const string& name = file->dependency(i)->name();
-      if (options.import_style == GeneratorOptions::kImportWeapp || options.import_style == GeneratorOptions::kImportMiniprogram) {
-        printer->Print(
-          "var $alias$ = require('$file$');\n"
-          "goog.object.extend(global.proto, $alias$);\n",
-          "alias", ModuleAlias(name), "file",
-          GetRootPath(file->name(), name) + GetJSFilename(options, name));
-      } else {
-        printer->Print(
+      printer->Print(
           "var $alias$ = require('$file$');\n"
           "goog.object.extend(proto, $alias$);\n",
           "alias", ModuleAlias(name), "file",
           GetRootPath(file->name(), name) + GetJSFilename(options, name));
-      }
     }
   }
 
@@ -3729,7 +3712,6 @@ void Generator::GenerateFile(const GeneratorOptions& options,
 
   // if provided is empty, do not export anything
   if ((options.import_style == GeneratorOptions::kImportCommonJs || 
-      options.import_style == GeneratorOptions::kImportWeapp ||
       options.import_style == GeneratorOptions::kImportMiniprogram) &&
       !provided.empty()) {
     printer->Print("goog.object.extend(exports, $package$);\n",
