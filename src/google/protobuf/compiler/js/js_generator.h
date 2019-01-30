@@ -71,7 +71,6 @@ struct GeneratorOptions {
     kImportCommonJsStrict,  // require() with no global export
     kImportBrowser,         // no import statements
     kImportEs6,             // import { member } from ''
-    kImportWeapp,           // for wechat miniprogram
     kImportMiniprogram,           // for wechat miniprogram
   } import_style;
 
